@@ -20,7 +20,6 @@ setuptools.setup(
         "License :: OSI Approved :: BSD License",
         "Operating System :: POSIX",
     ],
-    ext_modules = [module_utils],
     install_requires=[
         "numpy",
         "pandas",
