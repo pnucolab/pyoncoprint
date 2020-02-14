@@ -1,7 +1,7 @@
 PyOncoPrint
 ===========
 
-Draw OncoPrint using Python. Check out ``example.ipynb`` for usage.
+Draw OncoPrint using Python. Check out `example.ipynb </example.ipynb>`_ for basic usage.
 
 Install
 =======
