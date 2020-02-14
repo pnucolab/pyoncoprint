@@ -11,9 +11,9 @@ Install
 
 Requirements
 ============
- - matplotlib
- - numpy
- - pandas (to parse pandas dataframe)
+- matplotlib
+- numpy
+- pandas (to parse pandas dataframe)
 
 License
 =======
