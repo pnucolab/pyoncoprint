@@ -5,14 +5,75 @@ from collections import defaultdict
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch, Rectangle
 from matplotlib.ticker import MaxNLocator
-from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+from matplotlib.transforms import Affine2D
+from matplotlib.legend_handler import HandlerLine2D
 import matplotlib.gridspec as gridspec
 
+from numbers import Number
+        
+
 class OncoPrint:
-    def __init__(self, recurrence_matrix, zorders=None, genes=None, samples=None, seperator=","):
+    class __PatchLegendElement:
+        def __init__(self, patch):
+            self.patch = patch
+            
+            
+    class __PatchLegendHandler:
+        def __init__(self, bgcolor, bgsize=[1, 1]):
+            self.bgcolor = bgcolor
+            self.bgsize = bgsize
+            
+        def legend_artist(self, legend, orig_handle, fontsize, handlebox):
+            x0 = handlebox.xdescent - handlebox.width * 0.5 * (self.bgsize[0] - 1)
+            y0 = handlebox.ydescent - handlebox.height * 0.5 * (self.bgsize[1] - 1)
+            width, height = handlebox.width * self.bgsize[0], handlebox.height * self.bgsize[1]
+            bgcolor = self.bgcolor
+            bg = Rectangle([x0, y0], width, height, color=bgcolor, lw=0, transform=handlebox.get_transform())
+            patch = orig_handle.patch
+            patch.set_transform(Affine2D().scale(width, height).translate(x0, y0) + handlebox.get_transform())
+            handlebox.add_artist(bg)
+            handlebox.add_artist(patch)
+            return patch
+        
+        
+    class __ScatterLegendElement:
+        def __init__(self, line2d):
+            self.line2d = line2d
+
+            
+    class __ScatterLegendHandler(HandlerLine2D):
+        def __init__(self, bgcolor, bgsize=[1, 1], marker_pad=0.3, numpoints=1, **kw):
+            self.bgcolor = bgcolor
+            self.bgsize = bgsize
+            HandlerLine2D.__init__(self, marker_pad=marker_pad, numpoints=numpoints, **kw)
+
+        def legend_artist(self, legend, orig_handle, fontsize, handlebox):
+            xdescent, ydescent, width, height = self.adjust_drawing_area(
+                     legend, orig_handle.line2d,
+                     handlebox.xdescent, handlebox.ydescent,
+                     handlebox.width, handlebox.height,
+                     fontsize)
+            artists = self.create_artists(legend, orig_handle.line2d,
+                                          xdescent, ydescent, width, height,
+                                          fontsize, handlebox.get_transform())
+
+            x0 = handlebox.xdescent - handlebox.width * 0.5 * (self.bgsize[0] - 1)
+            y0 = handlebox.ydescent - handlebox.height * 0.5 * (self.bgsize[1] - 1)
+            width, height = handlebox.width * self.bgsize[0], handlebox.height * self.bgsize[1]
+            bgcolor = self.bgcolor
+            bg = Rectangle([x0, y0], width, height, color=bgcolor, lw=0, transform=handlebox.get_transform())
+
+            handlebox.add_artist(bg)
+            for a in artists:
+                handlebox.add_artist(a)
+
+            return artists[0]
+        
+    
+    def __init__(self, recurrence_matrix, genes=None, samples=None, seperator=","):
         if isinstance(recurrence_matrix, pd.DataFrame):
             if samples is None:
                 samples = recurrence_matrix.columns
@@ -21,173 +82,180 @@ class OncoPrint:
             mat = recurrence_matrix.to_numpy()
         else:
             mat = recurrence_matrix
-
+        
         if genes is None:
             genes = np.array(["Gene %d"%i for i in range(1, arr.shape[0] + 1)])
         if samples is None:
             samples = np.array(["Sample %d"%i for i in range(1, arr.shape[1] + 1)])
         
-        dedup_mat = []
-        for g in list(np.unique(genes)):
-            rows = mat[genes == g, :]
-            joined_row = rows[0]
-            for ridx in range(1, len(rows)):
-                for cidx in range(len(samples)):
-                    if isinstance(joined_row[cidx], str) and isinstance(rows[ridx][cidx], str):
-                        joined_row[cidx] += seperator + rows[ridx][cidx]
-                    elif isinstance(rows[ridx][cidx], str):
-                        joined_row[cidx] = rows[ridx][cidx]
-            dedup_mat.append(joined_row)
-        mat = np.array(dedup_mat)
-        genes = np.unique(genes)
-        
-        mutation_types = set()
-        cntmat = np.zeros_like(mat, dtype=int)
-        for i in range(mat.shape[0]):
-            for j in range(mat.shape[1]):
-                if isinstance(mat[i,j], str):
-                    mutations = np.unique(mat[i,j].split(seperator))
-                    for mut in mutations:
-                        mutation_types.add(mut)
-                    cntmat[i,j] = len(mutations)
-
-        if zorders:
-            self.mutation_types = zorders
+        _, uniq_idx = np.unique(genes, return_index=True)
+        if len(uniq_idx) != len(genes):
+            dedup_mat = []
+            dedup_genes = genes[np.sort(uniq_idx)]
+            for g in dedup_genes:
+                rows = mat[genes == g, :]
+                joined_row = rows[0]
+                for ridx in range(1, len(rows)):
+                    for cidx in range(len(samples)):
+                        if self._is_valid(joined_row[cidx]) and self._is_valid(rows[ridx][cidx]):
+                            joined_row[cidx] += seperator + rows[ridx][cidx]
+                        elif self._is_valid(rows[ridx][cidx]):
+                            joined_row[cidx] = rows[ridx][cidx]
+                dedup_mat.append(joined_row)
+            self.mat = np.array(dedup_mat)
+            self.genes = dedup_genes
         else:
-            self.mutation_types = sorted(mutation_types)
-        
+            self.mat = mat
+            self.genes = genes
+            
         self.seperator = seperator
-        self.mat = mat
-        self.genes = genes
-        self.samples = samples
-        self.count_mat = cntmat
+        self.samples = samples   
         
         
-    def _sort_default(self):
-        sorted_gene_indices = np.argsort(np.sum(self.count_mat.astype(bool), axis=1))[::-1] # gene order
-        sorted_sample_indices = []
-        for gidx in range(len(sorted_gene_indices)):
-            r = sorted_gene_indices[gidx]
-            sidx_hasmuts = np.where(self.count_mat[r, :] > 0)[0]
-            cnts = self.count_mat[:, sidx_hasmuts][r, :]
-            for cnt in np.unique(cnts)[::-1]: # np.unique returns sorted array
-                sidx_cntsorted = sidx_hasmuts[cnts == cnt]
-                muts = self.mat[:, sidx_cntsorted][r, :]
-                mut_types, mut_freqs = np.unique(muts, return_counts=True)
-                for mut in mut_types[np.argsort(mut_freqs)[::-1]]:
-                    sidx_sorted = sidx_cntsorted[muts == mut]
-                    for sidx in sidx_sorted:
-                        if not sidx in sorted_sample_indices:
-                            sorted_sample_indices.append(sidx)
-        sorted_sample_indices = np.array(sorted_sample_indices)
-        return sorted_gene_indices, sorted_sample_indices
+    def _is_valid(self, s):
+        return isinstance(s, str) and len(s) > 0
+    
+    
+    def _sort_genes_default(self):
+        cntmat = np.zeros_like(self.sorted_mat, dtype=int)
+        for i in range(self.sorted_mat.shape[0]):
+            for j in range(self.sorted_mat.shape[1]):
+                if self._is_valid(self.sorted_mat[i,j]):
+                    cntmat[i,j] = len(np.unique(self.sorted_mat[i,j].split(self.seperator)))
         
-    def oncoprint(self, markers, title="", title_fontsize=30, sort_method='default', figsize=[50, 20], width_ratios=[8, 1, 1], height_ratios=[1, 5], background_color="#dddddd", gap=0.2, leftaxis_template="{0:.0%}"):
+        sorted_indices = np.argsort(np.sum(cntmat, axis=1))[::-1] # gene order
+        self.sorted_genes = self.genes[sorted_indices]
+        self.sorted_mat = self.sorted_mat[sorted_indices, :]
         
-        if sort_method == 'unsorted':
-            sorted_gene_indices, sorted_sample_indices = np.arange(self.mat.shape[0]), np.arange(self.mat.shape[1])
-        elif sort_method != 'default':
-            print("Warning: sort method other than default is not supported yet.")
-            sorted_gene_indices, sorted_sample_indices = self._sort_default()
+        
+    def _sort_samples_default(self, mutation_types):
+        mutation_to_weight = {mut: i for i, mut in enumerate(mutation_types[::-1], start=1)}
+        weighted_filpped_cntmat = np.zeros_like(self.sorted_mat, dtype=int)
+        for i in range(self.sorted_mat.shape[0]):
+            for j in range(self.sorted_mat.shape[1]):
+                if self._is_valid(self.sorted_mat[i,j]):
+                    for mut in np.unique(self.sorted_mat[i,j].split(self.seperator)):
+                        weighted_filpped_cntmat[self.sorted_mat.shape[0] - i - 1, j] += mutation_to_weight.get(mut, 0)
+        sorted_indices = np.lexsort(weighted_filpped_cntmat)[::-1]
+        self.sorted_samples = self.samples[sorted_indices]
+        self.sorted_mat = self.sorted_mat[:, sorted_indices]
+        
+        
+    def oncoprint(self, markers, title="", gene_sort_method='default', sample_sort_method='default', figsize=[50, 20], width_ratios=[10, 1, 1], height_ratios=[1, 5], cell_background="#dddddd", gap=0.3, ratio_template="{0:.0%}", legend_handle_size_ratio=[1, 1], legend_kwargs={}):
+        f, ((ax_top, ax_empty1, ax_empty2), (ax, ax_right, ax_legend)) = plt.subplots(2, 3, figsize=figsize, gridspec_kw={'width_ratios': width_ratios, 'height_ratios': height_ratios})
+                
+        mutation_types = [b[0] for b in sorted(markers.items(), key=lambda a: a[1].get('zorder', 1))]
+        self.sorted_mat = self.mat
+        self.sorted_genes = self.genes
+        self.sorted_samples = self.samples
+        if gene_sort_method != 'unsorted':
+            if gene_sort_method == 'default':
+                self._sort_genes_default()
+            else:
+                print("Warning: gene sorting method '%s' is not supported."%gene_sort_method)
+        if sample_sort_method != 'unsorted':
+            if sample_sort_method == 'default':
+                self._sort_samples_default(mutation_types)
+            else:
+                print("Warning: sample sorting method '%s' is not supported."%sample_sort_method)
+
+        if isinstance(gap, Number):
+            gap = np.array([gap, gap])
         else:
-            sorted_gene_indices, sorted_sample_indices = self._sort_default()
-        
-        sorted_genes = self.genes[sorted_gene_indices]
-        sorted_samples = self.samples[sorted_sample_indices]
-        sorted_mat = self.mat[sorted_gene_indices, :][:, sorted_sample_indices]
-        
-        background_length = 1 - gap
+            assert len(gap) == 2, "The length of 'gap' is only allowed to be 2."
+            gap = np.array(gap)
+            
         backgrounds = []
-        fill_mutations = defaultdict(lambda: [])
+        background_lengths = 1.0 - gap
+        t_scale = Affine2D().scale(*background_lengths)
+        patch_mutations = defaultdict(lambda: [[], []])
         scatter_mutations = defaultdict(lambda: [[], []])
-        
-        stacked_counts_top = np.zeros([len(self.mutation_types), sorted_mat.shape[1]])
-        stacked_counts_right = np.zeros([len(self.mutation_types), sorted_mat.shape[0]])
-        counts_left = np.zeros(sorted_mat.shape[0])
-        for i in range(sorted_mat.shape[0]):
-            for j in range(sorted_mat.shape[1]):
-                rect = Rectangle((j - background_length/2.0, i - background_length/2.0), background_length, background_length)
+        stacked_counts_top = np.zeros([len(mutation_types), self.sorted_mat.shape[1]])
+        stacked_counts_right = np.zeros([len(mutation_types), self.sorted_mat.shape[0]])
+        counts_left = np.zeros(self.sorted_mat.shape[0])
+        for i in range(self.sorted_mat.shape[0]):
+            for j in range(self.sorted_mat.shape[1]):
+                rect = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths)
                 backgrounds.append(rect)
-                if isinstance(sorted_mat[i,j], str):
+                if self._is_valid(self.sorted_mat[i,j]):
                     counts_left[i] += 1
-                    for mut in sorted_mat[i,j].split(self.seperator):
-                        stacked_counts_top[self.mutation_types.index(mut), j] += 1
-                        stacked_counts_right[self.mutation_types.index(mut), i] += 1
+                    for mut in self.sorted_mat[i,j].split(self.seperator):
+                        stacked_counts_top[mutation_types.index(mut), j] += 1
+                        stacked_counts_right[mutation_types.index(mut), i] += 1
                         ms = markers[mut]
-                        if ms['marker'] == 'fill' or ms['marker'] == 'rect':
-                            full_length = 1 - gap
-                            w = full_length * ms.get('width', 1)
-                            h = full_length * ms.get('height', 1)
-                            mut_marker = Rectangle((j - w * 0.5, i - h * 0.5), w, h)
-                            fill_mutations[mut].append(mut_marker)
+                        if isinstance(ms['marker'], str) and (ms['marker'] == 'fill' or ms['marker'] == 'rect'):
+                            patch_mutations[mut][0].append(Rectangle((0, 0), 1, 1))
+                            patch_mutations[mut][1].append((j, i, ))
+                        elif isinstance(ms['marker'], Patch):
+                            patch_mutations[mut][0].append(ms['marker'])
+                            patch_mutations[mut][1].append((j, i, ))
                         else:
                             scatter_mutations[mut][0].append(j)
                             scatter_mutations[mut][1].append(i)
-
-        f = plt.figure(figsize=figsize)
-
-        gs = gridspec.GridSpec(2, 3, width_ratios=width_ratios, height_ratios=height_ratios)
-        gs.update(wspace=0.15, hspace=0.05)
-        
-        #f, ((ax_top, ax_empty1, ax_empty2), (ax, ax_right, ax_legend)) = plt.subplots(2, 3, figsize=figsize, gridspec_kw={
-        #    'width_ratios': width_ratios,
-        #    'height_ratios': height_ratios,
-        #})
-        
-        ax_top = plt.subplot(gs[0])
-        ax_empty1 = plt.subplot(gs[1])
-        ax_empty2 = plt.subplot(gs[2])
-        ax = plt.subplot(gs[3])
-        ax_right = plt.subplot(gs[4])
-        ax_legend = plt.subplot(gs[5])
                 
-        if title != "":
-            ttl = f.suptitle(title, fontsize=title_fontsize)
-        
-        pc = PatchCollection(backgrounds, facecolor=background_color)
+        pc = PatchCollection(backgrounds, color=cell_background, linewidth=0)
         ax.add_collection(pc)
-
-        for mut, patches in fill_mutations.items():
-            col = markers[mut].get('color', "red")
-            pc = PatchCollection(patches, facecolor=col)
+        for mut in mutation_types:
+            if not mut in patch_mutations:
+                continue
+            patches, coords = patch_mutations[mut]
+            ms = markers[mut]
+            w, h = background_lengths * (ms.get('width', 1.0), ms.get('height', 1.0), )
+            t_scale = Affine2D().scale(w, h)
+            for p, (x, y) in zip(patches, coords):
+                p.set_transform(t_scale + Affine2D().translate(x - w * 0.5, y - h * 0.5))
+            pc_kwargs = {k: v for k, v in ms.items() if not k in ('marker', 'width', 'height', )}
+            if isinstance(ms['marker'], str) and (ms['marker'] == 'fill' or ms['marker'] == 'rect'):
+                pc_kwargs['linewidth'] = pc_kwargs.get('linewidth', 0)
+            pc = PatchCollection(patches, **pc_kwargs)
             ax.add_collection(pc)
 
-        for mut, (x, y) in scatter_mutations.items():
-            ms = markers[mut]
-            m = ms.get('marker', '.')
-            c = ms.get('color', "red")
-            s = ms.get('size', 50)
-            ax.scatter(x, y, marker=m, c=c, s=s)
+        for mut in mutation_types:
+            if not mut in scatter_mutations:
+                continue
+            ax.scatter(*scatter_mutations[mut], **markers[mut])
 
-        ax_xticks = range(len(sorted_samples))
-        ax_yticks = range(len(sorted_genes))
+        ax_xticks = range(len(self.sorted_samples))
+        ax_yticks = range(len(self.sorted_genes))
 
         ax_top.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax_right.xaxis.set_major_locator(MaxNLocator(integer=True))
         
-        bottom = np.zeros(sorted_mat.shape[1])
+        bottom = np.zeros(self.mat.shape[1])
         for idx, cnts in enumerate(stacked_counts_top):
-            col = markers[self.mutation_types[idx]]['color']
+            col = markers[mutation_types[idx]]['color']
             ax_top.bar(ax_xticks, cnts, color=col, bottom=bottom)
             bottom += cnts
             
-        left = np.zeros(sorted_mat.shape[0])
+        left = np.zeros(self.mat.shape[0])
         for idx, cnts in enumerate(stacked_counts_right):
-            col = markers[self.mutation_types[idx]]['color']
+            col = markers[mutation_types[idx]]['color']
             ax_right.barh(ax_yticks, cnts, color=col, left=left)
             left += cnts
             
         legend_elements = []
-        for mut in self.mutation_types:
+        legend_handler_map = {}
+        for mut in mutation_types:
+            mut_class = type(mut, (), {})
             ms = markers[mut]
-            col = ms['color']
             mk = ms['marker']
-            if mk == 'fill' or mk == 'rect':
-                el = Patch(facecolor=col, edgecolor=col, label=mut)
-            else:
-                el = Line2D([0], [0], color='#ffffff00', markerfacecolor=col, markeredgecolor=col, markeredgewidth=2, marker=mk, markersize=ms.get('size', 20), label=mut)
+            col = ms['color']
+            if mut in scatter_mutations:
+                line2d = Line2D([0], [0], color='#ffffff00', markerfacecolor=col, markeredgecolor=col, markeredgewidth=2, marker=mk)
+                el = self.__ScatterLegendElement(line2d)
+            elif mut in patch_mutations:
+                if isinstance(mk, str) and (mk == 'fill' or mk == 'rect'):
+                    width, height = ms.get('width', 1), ms.get('height', 1)
+                    patch = Rectangle(((1.0 - width) * 0.5, (1.0 - height) * 0.5, ), width, height, color=col, lw=0)
+                else:
+                    patch = mk
+                el = self.__PatchLegendElement(patch)
             legend_elements.append(el)
-        leg = ax_legend.legend(handles=legend_elements, loc='center', prop={'size': 20})
+        leg = ax_legend.legend(legend_elements, mutation_types,
+                               handler_map={
+                                   self.__PatchLegendElement: self.__PatchLegendHandler(bgcolor=cell_background, bgsize=legend_handle_size_ratio),
+                                   self.__ScatterLegendElement: self.__ScatterLegendHandler(bgcolor=cell_background, bgsize=legend_handle_size_ratio)
+                               }, loc='center', **legend_kwargs)
         leg_fr = leg.get_frame()
         
         leg_fr.set_edgecolor('none')
@@ -195,18 +263,20 @@ class OncoPrint:
         leg_fr.set_linewidth(0.0)
 
         ax.set_xticks(ax_xticks)
-        ax.set_xticklabels(sorted_samples)
+        ax.set_xticklabels(self.sorted_samples)
         ax.tick_params(axis='x', rotation=90)
 
         ax.set_yticks(ax_yticks)
-        ax.set_yticklabels([leftaxis_template.format(e/float(sorted_mat.shape[1])) for e in counts_left])
+        ax.set_yticklabels([ratio_template.format(e/float(self.mat.shape[1])) for e in counts_left])
 
         ax2 = ax.twinx()
         ax2.set_yticks(ax_yticks)
-        ax2.set_yticklabels(sorted_genes)
+        ax2.set_yticklabels(self.sorted_genes)
+        
+        ax_right.tick_params(axis='x', rotation=90)
 
-        ax_xlim = [-background_length/2.0, sorted_mat.shape[1] - 1 + background_length/2.0]
-        ax_ylim = [sorted_mat.shape[0] - 1 + background_length/2.0, -background_length/2.0]
+        ax_xlim = [-background_lengths[0]/2.0, self.mat.shape[1] - 1 + background_lengths[0]/2.0]
+        ax_ylim = [self.mat.shape[0] - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]
 
         ax.set_xlim(ax_xlim)
         ax.set_ylim(ax_ylim)
@@ -238,7 +308,11 @@ class OncoPrint:
         ax_empty2.axis('off')
         ax_legend.axis('off')
 
-        #plt.tight_layout()
-        
+        plt.tight_layout()
+
+        if title != "":
+            ttl = f.suptitle(title)
+            f.subplots_adjust(top=0.85)
+
         return f, (ax, ax2, ax_top, ax_right, ax_legend)
         
