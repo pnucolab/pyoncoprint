@@ -3,6 +3,11 @@ PyOncoPrint
 
 Draw OncoPrint using Python. Check out `example.ipynb </example.ipynb>`_ for basic usage.
 
+An example output:
+
+.. image:: oncoprint.png
+  :alt: Example oncoprint image
+
 Install
 =======
 .. code-block:: bash
