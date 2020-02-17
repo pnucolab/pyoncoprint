@@ -13,6 +13,7 @@ from matplotlib.legend_handler import HandlerLine2D
 import matplotlib.gridspec as gridspec
 
 from numbers import Number
+from copy import copy
         
 
 class OncoPrint:
@@ -144,7 +145,7 @@ class OncoPrint:
     def oncoprint(self, markers, title="", gene_sort_method='default', sample_sort_method='default', figsize=[50, 20], width_ratios=[10, 1, 1], height_ratios=[1, 5], cell_background="#dddddd", gap=0.3, ratio_template="{0:.0%}", legend_handle_size_ratio=[1, 1], legend_kwargs={}):
         f, ((ax_top, ax_empty1, ax_empty2), (ax, ax_right, ax_legend)) = plt.subplots(2, 3, figsize=figsize, gridspec_kw={'width_ratios': width_ratios, 'height_ratios': height_ratios})
                 
-        mutation_types = [b[0] for b in sorted(markers.items(), key=lambda a: a[1].get('zorder', 1))]
+        mutation_types = [b[0] for b in sorted(markers.items(), key=lambda a: a[1].get('zindex', 1))]
         self.sorted_mat = self.mat
         self.sorted_genes = self.genes
         self.sorted_samples = self.samples
@@ -187,7 +188,7 @@ class OncoPrint:
                             patch_mutations[mut][0].append(Rectangle((0, 0), 1, 1))
                             patch_mutations[mut][1].append((j, i, ))
                         elif isinstance(ms['marker'], Patch):
-                            patch_mutations[mut][0].append(ms['marker'])
+                            patch_mutations[mut][0].append(copy(ms['marker']))
                             patch_mutations[mut][1].append((j, i, ))
                         else:
                             scatter_mutations[mut][0].append(j)
@@ -195,26 +196,35 @@ class OncoPrint:
                 
         pc = PatchCollection(backgrounds, color=cell_background, linewidth=0)
         ax.add_collection(pc)
+        
+        legend_elements = []
         for mut in mutation_types:
-            if not mut in patch_mutations:
-                continue
-            patches, coords = patch_mutations[mut]
             ms = markers[mut]
-            w, h = background_lengths * (ms.get('width', 1.0), ms.get('height', 1.0), )
-            t_scale = Affine2D().scale(w, h)
-            for p, (x, y) in zip(patches, coords):
-                p.set_transform(t_scale + Affine2D().translate(x - w * 0.5, y - h * 0.5))
-            pc_kwargs = {k: v for k, v in ms.items() if not k in ('marker', 'width', 'height', )}
-            if isinstance(ms['marker'], str) and (ms['marker'] == 'fill' or ms['marker'] == 'rect'):
-                pc_kwargs['linewidth'] = pc_kwargs.get('linewidth', 0)
-            pc = PatchCollection(patches, **pc_kwargs)
-            ax.add_collection(pc)
-
-        for mut in mutation_types:
-            if not mut in scatter_mutations:
-                continue
-            ax.scatter(*scatter_mutations[mut], **markers[mut])
-
+            mk = ms['marker']
+            col = ms['color']
+            if mut in patch_mutations:
+                patches, coords = patch_mutations[mut]
+                w, h = background_lengths * (ms.get('width', 1.0), ms.get('height', 1.0), )
+                t_scale = Affine2D().scale(w, -h).translate(0, h)
+                for p, (x, y) in zip(patches, coords):
+                    p.set_transform(t_scale + Affine2D().translate(x - w * 0.5, y - h * 0.5))
+                pc_kwargs = {k: v for k, v in ms.items() if not k in ('marker', 'width', 'height', 'zindex', )}
+                if isinstance(mk, str) and (mk == 'fill' or mk == 'rect'):
+                    pc_kwargs['linewidth'] = pc_kwargs.get('linewidth', 0)
+                    legend_width, legend_height = ms.get('width', 1), ms.get('height', 1)
+                    legend_patch = Rectangle(((1.0 - legend_width) * 0.5, (1.0 - legend_height) * 0.5, ), legend_width, legend_height)
+                else:
+                    legend_patch = copy(mk)
+                pc = PatchCollection(patches, **pc_kwargs)
+                ax.add_collection(pc)
+                legend_el = self.__PatchLegendElement(PatchCollection([legend_patch], **pc_kwargs))
+            elif mut in scatter_mutations:
+                scatter_kwargs = {k: v for k, v in markers[mut].items() if k != 'zindex'}
+                ax.scatter(*scatter_mutations[mut], **scatter_kwargs)
+                line2d = Line2D([0], [0], color='#ffffff00', markerfacecolor=col, markeredgecolor=col, markeredgewidth=2, marker=mk)
+                legend_el = self.__ScatterLegendElement(line2d)
+            legend_elements.append(legend_el)
+            
         ax_xticks = range(len(self.sorted_samples))
         ax_yticks = range(len(self.sorted_genes))
 
@@ -233,24 +243,6 @@ class OncoPrint:
             ax_right.barh(ax_yticks, cnts, color=col, left=left)
             left += cnts
             
-        legend_elements = []
-        legend_handler_map = {}
-        for mut in mutation_types:
-            mut_class = type(mut, (), {})
-            ms = markers[mut]
-            mk = ms['marker']
-            col = ms['color']
-            if mut in scatter_mutations:
-                line2d = Line2D([0], [0], color='#ffffff00', markerfacecolor=col, markeredgecolor=col, markeredgewidth=2, marker=mk)
-                el = self.__ScatterLegendElement(line2d)
-            elif mut in patch_mutations:
-                if isinstance(mk, str) and (mk == 'fill' or mk == 'rect'):
-                    width, height = ms.get('width', 1), ms.get('height', 1)
-                    patch = Rectangle(((1.0 - width) * 0.5, (1.0 - height) * 0.5, ), width, height, color=col, lw=0)
-                else:
-                    patch = mk
-                el = self.__PatchLegendElement(patch)
-            legend_elements.append(el)
         leg = ax_legend.legend(legend_elements, mutation_types,
                                handler_map={
                                    self.__PatchLegendElement: self.__PatchLegendHandler(bgcolor=cell_background, bgsize=legend_handle_size_ratio),
