@@ -11,10 +11,11 @@ from matplotlib.lines import Line2D
 from matplotlib.transforms import Affine2D
 from matplotlib.legend_handler import HandlerLine2D
 import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid1 import make_axes_locatable, host_subplot
 
 from numbers import Number
 from copy import copy
-        
+
 
 class OncoPrint:
     class __PatchLegendElement:
@@ -112,10 +113,8 @@ class OncoPrint:
         self.seperator = seperator
         self.samples = samples   
         
-        
     def _is_valid(self, s):
         return isinstance(s, str) and len(s) > 0
-    
     
     def _sort_genes_default(self):
         cntmat = np.zeros_like(self.sorted_mat, dtype=int)
@@ -127,7 +126,6 @@ class OncoPrint:
         sorted_indices = np.argsort(np.sum(cntmat, axis=1))[::-1] # gene order
         self.sorted_genes = self.genes[sorted_indices]
         self.sorted_mat = self.sorted_mat[sorted_indices, :]
-        
         
     def _sort_samples_default(self, mutation_types):
         mutation_to_weight = {mut: i for i, mut in enumerate(mutation_types[::-1], start=1)}
@@ -141,10 +139,17 @@ class OncoPrint:
         self.sorted_samples = self.samples[sorted_indices]
         self.sorted_mat = self.sorted_mat[:, sorted_indices]
         
-        
-    def oncoprint(self, markers, title="", gene_sort_method='default', sample_sort_method='default', figsize=[50, 20], width_ratios=[10, 1, 1], height_ratios=[1, 5], cell_background="#dddddd", gap=0.3, ratio_template="{0:.0%}", legend_handle_size_ratio=[1, 1], legend_kwargs={}):
-        f, ((ax_top, ax_empty1, ax_empty2), (ax, ax_right, ax_legend)) = plt.subplots(2, 3, figsize=figsize, gridspec_kw={'width_ratios': width_ratios, 'height_ratios': height_ratios})
-                
+    def oncoprint(self, markers, annotation_types={},
+                  title="",
+                  gene_sort_method='default',
+                  sample_sort_method='default',
+                  figsize=[50, 20],
+                  is_topplot = True,
+                  is_rightplot = True,
+                  is_legend = True,              
+                  cell_background="#dddddd", gap=0.3,
+                  ratio_template="{0:.0%}",
+                  legend_handle_size_ratio=[1, 1], legend_kwargs={}):
         mutation_types = [b[0] for b in sorted(markers.items(), key=lambda a: a[1].get('zindex', 1))]
         self.sorted_mat = self.mat
         self.sorted_genes = self.genes
@@ -176,11 +181,11 @@ class OncoPrint:
         counts_left = np.zeros(self.sorted_mat.shape[0])
         for i in range(self.sorted_mat.shape[0]):
             for j in range(self.sorted_mat.shape[1]):
-                rect = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths)
-                backgrounds.append(rect)
+                backgrounds.append(Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths))
                 if self._is_valid(self.sorted_mat[i,j]):
                     counts_left[i] += 1
-                    for mut in self.sorted_mat[i,j].split(self.seperator):
+                    for mut in np.unique(self.sorted_mat[i,j].split(self.seperator)):
+                        assert mut in mutation_types, "Marker for '%s' is not defined."%mut
                         stacked_counts_top[mutation_types.index(mut), j] += 1
                         stacked_counts_right[mutation_types.index(mut), i] += 1
                         ms = markers[mut]
@@ -193,10 +198,54 @@ class OncoPrint:
                         else:
                             scatter_mutations[mut][0].append(j)
                             scatter_mutations[mut][1].append(i)
-                
+        
+        f = plt.figure(figsize=figsize)
+        ax = host_subplot(111)
+        ax_divider = make_axes_locatable(ax)
+        #ratio_gap = gap / (len(self.sorted_genes) - gap)
+        
+        ax_annot = None
+        ax_top = None
+        ax_right = None
+        ax_legend = None
+        if len(annotation_types) > 0:
+            ratio_annot = (len(annotation_types) - gap[1]) / (len(self.sorted_genes) - gap[1])
+            ax_annot = ax_divider.append_axes("top", size="{0:.6%}".format(ratio_annot), pad=0.2)
+            yticks = []
+            sorted_annotation_types = sorted(annotation_types.items(), key=lambda e: annotation_types[e[0]].get('order', 99999999))
+            patches = []
+            for i, (annot_type, annot_type_dic) in enumerate(sorted_annotation_types):
+                annots = annot_type_dic['annotations']
+                annot_colors = annot_type_dic['colors']
+                yticks.append(annot_type)
+                for j, annot in enumerate(annots):
+                    if self._is_valid(annot):
+                        p = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths, color=annot_colors[annot], lw=0)
+                    else:
+                        p = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths, color=cell_background, lw=0)
+                    patches.append(p)
+            ax_annot.add_collection(PatchCollection(patches, match_original=True))
+            ax_annot.set_ylim([len(annotation_types) - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]) 
+            ax_annot.set_yticks(range(len(yticks)))
+            ax_annot.set_yticklabels(yticks)
+            ax.get_shared_x_axes().join(ax, ax_annot)
+            ax_annot.tick_params(top=False, bottom=False, left=False, right=False,
+                                 labeltop=False, labelbottom=False, labelleft=True, labelright=False)
+            for spine in ax_annot.spines.values():
+                spine.set_visible(False)
+        if is_topplot:
+            ax_top = ax_divider.append_axes("top", size=1, pad=0.2)
+            ax.get_shared_x_axes().join(ax, ax_top)
+        if is_rightplot:
+            ax_right = ax_divider.append_axes("right", size=2, pad=1)
+            ax.get_shared_y_axes().join(ax, ax_right)
+        if is_legend:
+            ax_legend = ax_divider.append_axes("right", size=2, pad=1)
+            ax_legend.axis('off')
+
         pc = PatchCollection(backgrounds, color=cell_background, linewidth=0)
         ax.add_collection(pc)
-        
+
         legend_elements = []
         for mut in mutation_types:
             ms = markers[mut]
@@ -228,32 +277,6 @@ class OncoPrint:
         ax_xticks = range(len(self.sorted_samples))
         ax_yticks = range(len(self.sorted_genes))
 
-        ax_top.yaxis.set_major_locator(MaxNLocator(integer=True))
-        ax_right.xaxis.set_major_locator(MaxNLocator(integer=True))
-        
-        bottom = np.zeros(self.mat.shape[1])
-        for idx, cnts in enumerate(stacked_counts_top):
-            col = markers[mutation_types[idx]]['color']
-            ax_top.bar(ax_xticks, cnts, color=col, bottom=bottom)
-            bottom += cnts
-            
-        left = np.zeros(self.mat.shape[0])
-        for idx, cnts in enumerate(stacked_counts_right):
-            col = markers[mutation_types[idx]]['color']
-            ax_right.barh(ax_yticks, cnts, color=col, left=left)
-            left += cnts
-            
-        leg = ax_legend.legend(legend_elements, mutation_types,
-                               handler_map={
-                                   self.__PatchLegendElement: self.__PatchLegendHandler(bgcolor=cell_background, bgsize=legend_handle_size_ratio),
-                                   self.__ScatterLegendElement: self.__ScatterLegendHandler(bgcolor=cell_background, bgsize=legend_handle_size_ratio)
-                               }, loc='center', **legend_kwargs)
-        leg_fr = leg.get_frame()
-        
-        leg_fr.set_edgecolor('none')
-        leg_fr.set_facecolor('none')
-        leg_fr.set_linewidth(0.0)
-
         ax.set_xticks(ax_xticks)
         ax.set_xticklabels(self.sorted_samples)
         ax.tick_params(axis='x', rotation=90)
@@ -262,49 +285,69 @@ class OncoPrint:
         ax.set_yticklabels([ratio_template.format(e/float(self.mat.shape[1])) for e in counts_left])
 
         ax2 = ax.twinx()
+        ax.get_shared_y_axes().join(ax, ax2)
         ax2.set_yticks(ax_yticks)
         ax2.set_yticklabels(self.sorted_genes)
         
-        ax_right.tick_params(axis='x', rotation=90)
-
         ax_xlim = [-background_lengths[0]/2.0, self.mat.shape[1] - 1 + background_lengths[0]/2.0]
         ax_ylim = [self.mat.shape[0] - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]
-
         ax.set_xlim(ax_xlim)
         ax.set_ylim(ax_ylim)
-        ax2.set_ylim(ax_ylim)
-        ax_top.set_xlim(ax_xlim)
-        ax_right.set_ylim(ax_ylim)
-
+        #ax2.set_ylim(ax_ylim)
         ax.tick_params(top=False, bottom=False, left=False, right=False)
         ax2.tick_params(top=False, bottom=False, left=False, right=False)
-        ax_top.tick_params(top=False, bottom=False, left=True, right=False,
-                           labeltop=False, labelbottom=False, labelleft=True, labelright=False)
-        ax_right.tick_params(top=True, bottom=False, left=False, right=False,
-                             labeltop=True, labelbottom=False, labelleft=False, labelright=False)
-
-        for idx, spine in enumerate(ax_top.spines.values()):
-            if idx == 0:
-                continue
-            spine.set_visible(False)
-        for idx, spine in enumerate(ax_right.spines.values()):
-            if idx == 3:
-                continue
-            spine.set_visible(False)
         for spine in ax.spines.values():
             spine.set_visible(False)
         for spine in ax2.spines.values():
             spine.set_visible(False)
-        
-        ax_empty1.axis('off')
-        ax_empty2.axis('off')
-        ax_legend.axis('off')
+            
+        if ax_legend is not None:
+            legend_kwargs_2 = copy(legend_kwargs)
+            legend_kwargs_2['loc'] = legend_kwargs.get('loc', 'center right')
+            leg = ax_legend.legend(legend_elements, mutation_types,
+                                   handler_map={
+                                       self.__PatchLegendElement: self.__PatchLegendHandler(bgcolor=cell_background, bgsize=legend_handle_size_ratio),
+                                       self.__ScatterLegendElement: self.__ScatterLegendHandler(bgcolor=cell_background, bgsize=legend_handle_size_ratio)
+                                   }, **legend_kwargs_2)
+            leg_fr = leg.get_frame()
 
-        plt.tight_layout()
-
+            leg_fr.set_edgecolor('none')
+            leg_fr.set_facecolor('none')
+            leg_fr.set_linewidth(0.0)
+            
+        if ax_top is not None:
+            bottom = np.zeros(self.mat.shape[1])
+            for idx, cnts in enumerate(stacked_counts_top):
+                col = markers[mutation_types[idx]]['color']
+                ax_top.bar(ax_xticks, cnts, color=col, width=background_lengths[0], bottom=bottom)
+                bottom += cnts
+            ax_top.yaxis.set_major_locator(MaxNLocator(integer=True))
+            #ax_top.set_xlim(ax_xlim)
+            ax_top.tick_params(top=False, bottom=False, left=True, right=False,
+                               labeltop=False, labelbottom=False, labelleft=True, labelright=False)
+            for idx, spine in enumerate(ax_top.spines.values()):
+                if idx == 0:
+                    continue
+                spine.set_visible(False)
+                
+        if ax_right is not None:
+            left = np.zeros(self.mat.shape[0])
+            for idx, cnts in enumerate(stacked_counts_right):
+                col = markers[mutation_types[idx]]['color']
+                ax_right.barh(ax_yticks, cnts, color=col, height=background_lengths[1], left=left)
+                left += cnts
+            ax_right.xaxis.set_major_locator(MaxNLocator(integer=True))
+            ax_right.tick_params(axis='x', rotation=90)
+            #ax_right.set_ylim(ax_ylim)
+            ax_right.tick_params(top=True, bottom=False, left=False, right=False,
+                                 labeltop=True, labelbottom=False, labelleft=False, labelright=False)
+            for idx, spine in enumerate(ax_right.spines.values()):
+                if idx == 3:
+                    continue
+                spine.set_visible(False)
+                
         if title != "":
             ttl = f.suptitle(title)
-            f.subplots_adjust(top=0.85)
-
+ 
         return f, (ax, ax2, ax_top, ax_right, ax_legend)
         
