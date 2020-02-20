@@ -381,5 +381,5 @@ class OncoPrint:
         if title != "":
             ttl = f.suptitle(title)
  
-        return f, (ax, ax2, ax_top, ax_right, ax_legend)
+        return f, (ax, ax2, ax_top, ax_annot, ax_right, ax_legend)
         
