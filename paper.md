@@ -25,8 +25,8 @@ bibliography: paper.bib
 OncoPrint, the plot to visualize an overview of genetic variants in sequencing
 data, has been widely used in the field of cancer genomics. However, still,
 there have been no libraries capable to generate OncoPrint written in Python yet,
-which is a big hassle to plot OncoPrints within a Python-based genetic variants
-analysis pipeline. This paper introduces a new Python package `PyOncoPrint`,
+which is a big hassle to plot OncoPrints within Python-based genetic variants
+analysis pipelines. This paper introduces a new Python package `PyOncoPrint`,
 which can be easily used to plot OncoPrints in Python. The package is based on
 the existing widely used scientific plotting library `Matplotlib`, the resulting
 plots are easy to be modified for various needs.
