@@ -13,7 +13,7 @@ authors:
 affiliations:
   - name: Divison of Computational Genomics and Systems Genetics, German Cancer Research Center (DKFZ), Heidelberg, Germany
     index: 1
-  - name: Computational Oncology, Molecular Diagnostics Program, National Center for Tumor Diseases (NCT), Heidelberg, Germany
+  - name: Computational Oncology, Molecular Diagnostics Program, National Center for Tumor Diseases (NCT), German Cancer Research Center (DKFZ), Heidelberg, Germany
     index: 2
 date: 09 February 2020
 bibliography: paper.bib
