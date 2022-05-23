@@ -39,9 +39,9 @@ class OncoPrint:
             mat = recurrence_matrix
         
         if genes is None:
-            genes = np.array(["Gene %d"%i for i in range(1, arr.shape[0] + 1)])
+            genes = np.array(["Gene %d"%i for i in range(1, recurrence_matrix.shape[0] + 1)])
         if samples is None:
-            samples = np.array(["Sample %d"%i for i in range(1, arr.shape[1] + 1)])
+            samples = np.array(["Sample %d"%i for i in range(1, recurrence_matrix.shape[1] + 1)])
         
         _, uniq_idx = np.unique(genes, return_index=True)
         if len(uniq_idx) != len(genes):
