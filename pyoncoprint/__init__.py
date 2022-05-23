@@ -82,15 +82,15 @@ class OncoPrint:
         
     def _sort_samples_default(self, mutation_types):
         mutation_to_weight = {mut: i for i, mut in enumerate(mutation_types[::-1], start=1)}
-        weighted_filpped_cntmat = np.zeros_like(self.sorted_mat, dtype=int)
+        weighted_flipped_cntmat = np.zeros_like(self.sorted_mat, dtype=int)
         for i in range(self.sorted_mat.shape[0]):
             for j in range(self.sorted_mat.shape[1]):
                 if self._is_valid_string(self.sorted_mat[i,j]):
                     for mut in np.unique(self.sorted_mat[i,j].split(self.seperator)):
-                        weighted_filpped_cntmat[self.sorted_mat.shape[0] - i - 1, j] += mutation_to_weight.get(mut, 0)
-        sorted_indices = np.lexsort(weighted_filpped_cntmat)[::-1]
-        self.sorted_samples = self.samples[sorted_indices]
-        self.sorted_mat = self.sorted_mat[:, sorted_indices]
+                        weighted_flipped_cntmat[self.sorted_mat.shape[0] - i - 1, j] += mutation_to_weight.get(mut, 0)
+        self.sorted_sample_indices = np.lexsort(weighted_flipped_cntmat)[::-1]
+        self.sorted_samples = self.samples[self.sorted_sample_indices]
+        self.sorted_mat = self.sorted_mat[:, self.sorted_sample_indices]
         
     def oncoprint(self, markers, annotations={},
                   title="",
@@ -156,7 +156,7 @@ class OncoPrint:
             ax_annot_yticks = []
             ax_annot_patches = []
             for i, (annot_type, annot_dic) in enumerate(sorted_annotations):
-                annots = annot_dic['annotations']
+                annots = annot_dic['annotations'][self.sorted_sample_indices]
                 annot_colors = annot_dic['colors']
                 ax_annot_yticks.append(annot_type)
                 for j, annot in enumerate(annots):
