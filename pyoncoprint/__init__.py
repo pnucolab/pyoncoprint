@@ -106,6 +106,7 @@ class OncoPrint:
         self.sorted_mat = self.mat
         self.sorted_genes = self.genes
         self.sorted_samples = self.samples
+        self.sorted_sample_indices = list(range(len(self.samples)))
         if gene_sort_method != 'unsorted':
             if gene_sort_method == 'default':
                 self._sort_genes_default()
