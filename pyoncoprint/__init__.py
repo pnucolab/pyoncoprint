@@ -106,6 +106,7 @@ class OncoPrint:
         self.sorted_mat = self.mat
         self.sorted_genes = self.genes
         self.sorted_samples = self.samples
+        self.sorted_sample_indices = list(range(len(self.samples)))
         if gene_sort_method != 'unsorted':
             if gene_sort_method == 'default':
                 self._sort_genes_default()
@@ -321,7 +322,11 @@ class OncoPrint:
                 if is_mut:
                     if label in legend_mut_to_patch:
                         p, w, h, pc_kwargs = legend_mut_to_patch[label]
-                        p.set_transform(p.get_transform() + Affine2D().scale(w, -h).translate(cur_x, cur_y + 0.5 + h * 0.5))
+                        #p.set_transform(p.get_transform() + Affine2D().scale(w, -h).translate(cur_x, cur_y + 0.5 + h * 0.5))
+                        p.set_transform(
+                            p.get_transform()
+                            + Affine2D().scale(w, -h)
+                            .translate(*background_lengths * 0.5 + (cur_x - 0.5 * w, cur_y + 0.5 * h)))
                         legend_pcs.append(PatchCollection([p], **pc_kwargs))
                     elif label in legend_mut_to_scatter:
                         scatter_kwargs = legend_mut_to_scatter[label]
