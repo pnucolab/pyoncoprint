@@ -8,7 +8,7 @@ setuptools.setup(
     name="pyoncoprint",
     version="0.3.0-devel",
     author="Jeongbin Park",
-    author_email="jeongbin.park@charite.de",
+    author_email="jeongbin.park@pusan.ac.kr",
     description="PyOncoPrint",
     long_description=long_description,
     long_description_content_type="text/x-rst",

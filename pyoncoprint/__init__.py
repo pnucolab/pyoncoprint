@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Patch, Rectangle
+from matplotlib.patches import Patch, Rectangle, Polygon
 from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D
 from matplotlib.transforms import Affine2D
@@ -103,9 +103,9 @@ class OncoPrint:
                   cell_background="#dddddd", gap=0.3,
                   ratio_template="{0:.0%}"):
         mutation_types = [b[0] for b in sorted(markers.items(), key=lambda a: a[1].get('zindex', 1))]
-        self.sorted_mat = self.mat
-        self.sorted_genes = self.genes
-        self.sorted_samples = self.samples
+        self.sorted_mat = self.mat.copy()
+        self.sorted_genes = self.genes.copy()
+        self.sorted_samples = self.samples.copy()
         self.sorted_sample_indices = list(range(len(self.samples)))
         if gene_sort_method != 'unsorted':
             if gene_sort_method == 'default':
@@ -153,33 +153,54 @@ class OncoPrint:
                             scatter_mutations[mut][1].append(i)
         is_annot = len(annotations) > 0
         if is_annot:
-            sorted_annotations = sorted(annotations.items(), key=lambda e: annotations[e[0]].get('order'))[::-1]
+            sorted_annotations = sorted(annotations.items(), key=lambda e: annotations[e[0]].get('order'))
             ax_annot_yticks = []
             ax_annot_patches = []
             for i, (annot_type, annot_dic) in enumerate(sorted_annotations):
-                annots = annot_dic['annotations'][self.sorted_sample_indices]
-                annot_colors = annot_dic['colors']
+                if isinstance(annot_dic['annotations'], pd.DataFrame):
+                    annots = annot_dic['annotations'].iloc[:, self.sorted_sample_indices].values
+                elif isinstance(annot_dic['annotations'], np.ndarray):
+                    annots = annot_dic['annotations'][self.sorted_sample_indices]
+                else:
+                    raise ValueError("The type of 'annotations' should be either 'pandas.DataFrame' or 'numpy.ndarray'.")
+                if annots.ndim > 2:
+                    raise ValueError("The dimension of 'annotations' should be less than 3.")
+                if annots.ndim == 1:
+                    annots = annots[:, np.newaxis]
+                else:
+                    annots = annots.T
+                annot_min = 0
+                upd = False
+                if len(annots[0]) == 1:
+                    annot_min = np.min(np.ravel(annots))
+                    annot_gmax = np.max(np.ravel(annots))
+                annot_colors = annot_dic.get('colors', annot_dic.get('color', None))
                 ax_annot_yticks.append(annot_type)
-                for j, annot in enumerate(annots):
-                    if self._is_valid_string(annot):
-                        p = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths, color=annot_colors[annot], lw=0)
-                        ax_annot_patches.append(p)
-                    elif hasattr(type(annot), '__iter__'):
-                        annot_item_bottom = 0.0
-                        annot_item_sum = np.sum(annot, dtype=float)
-                        if annot_item_sum > 0:
-                            for annot_item in annot:
-                                annot_item_height = background_lengths[1] * annot_item / annot_item_sum
-                                p = Rectangle(-background_lengths / 2.0 + (j, i + annot_item_bottom, ),
-                                              background_lengths[0], annot_item_height, color=annot_colors[annot_item], lw=0)
-                                annot_item_bottom += annot_item_height
+                for j, annot_col in enumerate(annots):
+                    if len(annot_col) == 1 and self._is_valid_string(annot_col[0]):
+                        annot = annot_col[0]
+                        if self._is_valid_string(annot):
+                            p = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths, color=annot_colors[annot], lw=0)
+                            ax_annot_patches.append(p)
+                    else:
+                        if len(annot_col) > 1:
+                            annot_max = np.sum(annot_col, dtype=float)
+                        else:
+                            annot_max = annot_gmax - annot_min
+                        if annot_max > 0:
+                            annot_bottom = 0.0
+                            for annot_idx, annot_item in zip(annot_dic['annotations'].index, annot_col):
+                                annot_height = background_lengths[1] * (annot_item - annot_min) / annot_max
+                                if len(annot_col) == 1:
+                                    annot_bottom = background_lengths[1] - annot_height
+                                col = annot_colors[annot_idx] if isinstance(annot_colors, dict) else annot_colors
+                                p = Rectangle(-background_lengths / 2.0 + (j, i + annot_bottom, ),
+                                            background_lengths[0], annot_height, color=col, lw=0)
+                                annot_bottom += annot_height
                                 ax_annot_patches.append(p)
                         else:
                             p = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths, color=cell_background, lw=0)
                             ax_annot_patches.append(p)
-                    else:
-                        p = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths, color=cell_background, lw=0)
-                        ax_annot_patches.append(p)
             ax_annot_pc = PatchCollection(ax_annot_patches, match_original=True)
             
         f = plt.figure(figsize=figsize)
@@ -337,6 +358,19 @@ class OncoPrint:
                                      cur_y + text_top_offset + 0.5 + text_height / 2.0))
                 cur_x += legend_item_width + tw_space * 10
                 return cur_x, cur_y
+            
+            def add_legend_scaler(min_val, max_val, col):
+                scaler_left_pad = 3
+                scaler_right_pad = 1
+                scaler_width = background_lengths[0] * 5
+                p = Polygon(((cur_x + scaler_left_pad, cur_y + background_lengths[1]), (cur_x + scaler_left_pad + scaler_width, cur_y + background_lengths[1]), (cur_x + scaler_left_pad + scaler_width, cur_y)), color=col, lw=0)
+                legend_patches.append(p)
+                legend_texts.append((str(min_val),
+                        cur_x + text_left_offset,
+                        cur_y + text_top_offset + 0.5 + text_height / 2.0))
+                legend_texts.append((str(max_val),
+                        cur_x + text_left_offset + scaler_width + scaler_left_pad + scaler_right_pad,
+                        cur_y + text_top_offset + 0.5 + text_height / 2.0))
 
             is_first = True
             for mut in mutation_types:
@@ -350,13 +384,18 @@ class OncoPrint:
                 for annot_type, annot_dic in sorted_annotations:
                     cur_x = pad_x
                     cur_y += line_height * 2.0
-                    annot_colors = annot_dic['colors']
                     legend_titles.append(annot_type)
                     legend_yticks.append(cur_y + 0.5)
-                    is_first = True
-                    for annot_label, annot_color in sorted(annot_colors.items(), key=lambda e: e[0]):
-                        cur_x, cur_y = add_legend_item(annot_label, annot_color, cur_x, cur_y, is_first, False)
-                        is_first = False
+                    if 'colors' in annot_dic:
+                        is_first = True
+                        annot_colors = annot_dic['colors']
+                        for annot_label, annot_color in sorted(annot_colors.items(), key=lambda e: e[0]):
+                            cur_x, cur_y = add_legend_item(annot_label, annot_color, cur_x, cur_y, is_first, False)
+                            is_first = False
+                    else:
+                        gmin = annot_dic['annotations'].values.ravel().min()
+                        gmax = annot_dic['annotations'].values.ravel().max()
+                        add_legend_scaler(gmin, gmax, annot_dic['color'])
 
             ax_legend_height = cur_y + 1
             ax_legend_height_ratio = ax_legend_height / (len(self.sorted_genes) - gap[1])
