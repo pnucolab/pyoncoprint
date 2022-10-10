@@ -10,6 +10,8 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D
 from matplotlib.transforms import Affine2D
 from matplotlib.legend_handler import HandlerLine2D
+from matplotlib.colors import Colormap, Normalize
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable, host_subplot
 
@@ -92,16 +94,31 @@ class OncoPrint:
         self.sorted_samples = self.samples[self.sorted_sample_indices]
         self.sorted_mat = self.sorted_mat[:, self.sorted_sample_indices]
         
-    def oncoprint(self, markers, annotations={},
+    def oncoprint(self, markers, annotations={}, heatmaps={},
                   title="",
                   gene_sort_method='default',
                   sample_sort_method='default',
                   figsize=[50, 20],
-                  is_topplot = True,
-                  is_rightplot = True,
-                  is_legend = True,              
+                  topplot = True,
+                  rightplot = True,
+                  legend = True,
                   cell_background="#dddddd", gap=0.3,
-                  ratio_template="{0:.0%}"):
+                  ratio_template="{0:.0%}",
+                  **kwargs):
+        
+        if 'is_topplot' in kwargs:
+            topplot = kwargs['is_topplot']
+            print("Warning: is_topplot is deprecated, use topplot instead")
+        if 'is_rightplot' in kwargs:
+            rightplot = kwargs['is_rightplot']
+            print("Warning: is_rightplot is deprecated, use rightplot instead")
+        if 'is_legend' in kwargs:
+            legend = kwargs['is_legend']
+            print("Warning: is_legend is deprecated, use legend instead")
+        for k in kwargs:
+            if k not in ['is_topplot', 'is_rightplot', 'is_legend']:
+                raise TypeError("OncoPrint.oncoprint() got an unexpected keyword argument '%s'" % k)
+
         mutation_types = [b[0] for b in sorted(markers.items(), key=lambda a: a[1].get('zindex', 1))]
         self.sorted_mat = self.mat.copy()
         self.sorted_genes = self.genes.copy()
@@ -151,8 +168,43 @@ class OncoPrint:
                         else:
                             scatter_mutations[mut][0].append(j)
                             scatter_mutations[mut][1].append(i)
-        is_annot = len(annotations) > 0
-        if is_annot:
+        
+        ax_height = self.sorted_mat.shape[0] # top to bottom
+        heatmap_patches = []
+        heatmap_texts = []
+        extra_yticks = []
+        for k, v in heatmaps.items():
+            extra_yticks += [''] + v['heatmap'].index.tolist()
+            heatmap_texts.append((0, ax_height + 0.2, k))
+            ax_height += 1
+            if isinstance(v['cmap'], str):
+                cmap = plt.get_cmap(v['cmap'])
+            elif isinstance(v['cmap'], Colormap):
+                cmap = v['cmap']
+            else:
+                raise TypeError("The type of 'cmap' is not supported.")
+            vmin = v.get('vmin', v['heatmap'].min().min())
+            vmax = v.get('vmax', v['heatmap'].max().max())
+            norm = Normalize(vmin=vmin, vmax=vmax)
+            if isinstance(v['heatmap'], pd.DataFrame):
+                hm = v['heatmap'].iloc[:, self.sorted_sample_indices].values
+            elif isinstance(v['heatmap'], np.ndarray):
+                hm = v['heatmap'][self.sorted_sample_indices]
+            else:
+                raise ValueError("The type of 'heatmap' should be either 'pandas.DataFrame' or 'numpy.ndarray'.")
+            for i in range(hm.shape[0]):
+                for j in range(hm.shape[1]):
+                    val = hm[i, j]
+                    if np.isnan(val):
+                        heatmap_patches.append(Rectangle((j - .5, ax_height - .02, ), 1, 0.04, color='grey'))
+                    else:
+                        heatmap_patches.append(Rectangle((j - .5, ax_height - .5, ), 1, 1, color=cmap(norm(val))))
+                    #backgrounds.append(Rectangle((j - .5, ax_height - .5, ), 1, 1))
+                ax_height += 1
+        ax_pc_heatmap = PatchCollection(heatmap_patches, match_original=True)
+
+        flag_annot = len(annotations) > 0
+        if flag_annot:
             sorted_annotations = sorted(annotations.items(), key=lambda e: annotations[e[0]].get('order'))
             ax_annot_yticks = []
             ax_annot_patches = []
@@ -202,22 +254,24 @@ class OncoPrint:
                             p = Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths, color=cell_background, lw=0)
                             ax_annot_patches.append(p)
             ax_annot_pc = PatchCollection(ax_annot_patches, match_original=True)
-            
+        
         f = plt.figure(figsize=figsize)
         ax = host_subplot(111)
         ax_divider = make_axes_locatable(ax)
-        
         ax_xticks = range(len(self.sorted_samples))
         ax_yticks = range(len(self.sorted_genes))
         ax.set_xticks(ax_xticks)
         ax.set_xticklabels(self.sorted_samples)
         ax.tick_params(axis='x', rotation=90)
-        ax.set_yticks(ax_yticks)
-        ax.set_yticklabels([ratio_template.format(e/float(self.mat.shape[1])) for e in counts_left])
+        ax.set_yticks(range(len(self.sorted_genes) + len(extra_yticks)))
+        ax.set_yticklabels([ratio_template.format(e/float(self.mat.shape[1])) for e in counts_left] + extra_yticks)
         ax.tick_params(top=False, bottom=False, left=False, right=False)
         for spine in ax.spines.values():
             spine.set_visible(False)
+        for t in heatmap_texts:
+            ax.text(*t)
         ax.add_collection(PatchCollection(backgrounds, color=cell_background, linewidth=0))
+        ax.add_collection(ax_pc_heatmap)
         legend_mut_to_patch = {}
         legend_mut_to_scatter = {}
         for mut in mutation_types:
@@ -229,7 +283,7 @@ class OncoPrint:
                 pc_kwargs = {k: v for k, v in ms.items() if not k in ('marker', 'width', 'height', 'zindex', )}
                 if isinstance(mk, str) and (mk == 'fill' or mk == 'rect'):
                     pc_kwargs['linewidth'] = pc_kwargs.get('linewidth', 0)
-                if is_legend:
+                if legend:
                     legend_p = copy(patches[0])
                     legend_mut_to_patch[mut] = (legend_p, w, h, pc_kwargs)
                 t_scale = Affine2D().scale(w, -h)
@@ -239,13 +293,13 @@ class OncoPrint:
                 ax.add_collection(pc)
             elif mut in scatter_mutations:
                 scatter_kwargs = {k: v for k, v in markers[mut].items() if k != 'zindex'}
-                if is_legend:
+                if legend:
                     legend_mut_to_scatter[mut] = scatter_kwargs
                 ax.scatter(*scatter_mutations[mut], **scatter_kwargs)
 
         ax2 = ax.twinx()
         ax.get_shared_y_axes().join(ax, ax2)
-        ax2.set_yticks(ax_yticks)
+        ax2.set_yticks(range(len(self.sorted_genes)))
         ax2.set_yticklabels(self.sorted_genes)
         ax2.tick_params(top=False, bottom=False, left=False, right=False)
         for spine in ax2.spines.values():
@@ -256,7 +310,7 @@ class OncoPrint:
         ax_right = None
         ax_legend = None
         #ratio_gap = gap / (len(self.sorted_genes) - gap)
-        if is_annot:
+        if flag_annot:
             ratio_annot = (len(annotations) - gap[1]) / (len(self.sorted_genes) - gap[1])
             ax_annot = ax_divider.append_axes("top", size="{0:.6%}".format(ratio_annot), pad=0.2)
             ax_annot.add_collection(ax_annot_pc)
@@ -268,7 +322,7 @@ class OncoPrint:
                                  labeltop=False, labelbottom=False, labelleft=True, labelright=False)
             for spine in ax_annot.spines.values():
                 spine.set_visible(False)
-        if is_topplot:
+        if topplot:
             ax_top = ax_divider.append_axes("top", size=1, pad=0.2)
             ax.get_shared_x_axes().join(ax, ax_top)
             bottom = np.zeros(self.mat.shape[1])
@@ -284,7 +338,7 @@ class OncoPrint:
                 if idx == 0:
                     continue
                 spine.set_visible(False)
-        if is_rightplot:
+        if rightplot:
             ax_right = ax_divider.append_axes("right", size=2, pad=1)
             ax.get_shared_y_axes().join(ax, ax_right)
             left = np.zeros(self.mat.shape[0])
@@ -302,14 +356,14 @@ class OncoPrint:
                 spine.set_visible(False)
                 
         ax_xlim = [-background_lengths[0]/2.0, self.mat.shape[1] - 1 + background_lengths[0]/2.0]                
-        ax_ylim = [self.mat.shape[0] - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]
+        ax_ylim = [ax_height - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]
         ax.set_xlim(ax_xlim)
         ax.set_ylim(ax_ylim)
         
-        if is_legend:
+        if legend:
             ax_size = ax.transAxes.transform([1, 1]) / f.dpi
             ax_size_reduced = copy(ax_size)
-            if is_rightplot:
+            if rightplot:
                 ax_size_reduced[0] -= 3 # pad + size of the plot
             ax_scale = ax_size / ax_size_reduced
             bb = _get_text_bbox(" ", ax, x=0, y=0, scale=ax_scale)
@@ -325,6 +379,7 @@ class OncoPrint:
             legend_patches = []
             legend_texts = []
             legend_pcs = []
+            legend_abs = []
             legend_scatters = []
             legend_yticks = [0.5, ]
             legend_titles = ['Genetic Alteration', ]
@@ -359,16 +414,26 @@ class OncoPrint:
                 cur_x += legend_item_width + tw_space * 10
                 return cur_x, cur_y
             
-            def add_legend_scaler(min_val, max_val, col):
-                scaler_left_pad = 3
-                scaler_right_pad = 1
-                scaler_width = background_lengths[0] * 5
-                p = Polygon(((cur_x + scaler_left_pad, cur_y + background_lengths[1]), (cur_x + scaler_left_pad + scaler_width, cur_y + background_lengths[1]), (cur_x + scaler_left_pad + scaler_width, cur_y)), color=col, lw=0)
-                legend_patches.append(p)
-                legend_texts.append((str(min_val),
+            def add_legend_scaler(min_val, max_val, col = None, cmap = None):
+                scaler_left_pad = 5
+                scaler_right_pad = 2
+                scaler_width = background_lengths[0] * 12
+                if col is not None:
+                    p = Polygon((
+                            (cur_x + scaler_left_pad, cur_y + background_lengths[1]), 
+                            (cur_x + scaler_left_pad + scaler_width, cur_y + background_lengths[1]),
+                            (cur_x + scaler_left_pad + scaler_width, cur_y)
+                        ), color=col, lw=0)
+                    legend_patches.append(p)
+                else:
+                    scaler_image = np.tile(cmap(np.linspace(0, 1, 256))[:, :3], (80, 1, 1))
+                    imagebox = OffsetImage(scaler_image, zoom=0.3)
+                    ab = AnnotationBbox(imagebox, (cur_x + text_left_offset + scaler_left_pad, cur_y + background_lengths[1] * 0.5), box_alignment=(0, 0.5), frameon=False)
+                    legend_abs.append(ab)
+                legend_texts.append(("%.2f"%min_val,
                         cur_x + text_left_offset,
                         cur_y + text_top_offset + 0.5 + text_height / 2.0))
-                legend_texts.append((str(max_val),
+                legend_texts.append(("%.2f"%max_val,
                         cur_x + text_left_offset + scaler_width + scaler_left_pad + scaler_right_pad,
                         cur_y + text_top_offset + 0.5 + text_height / 2.0))
 
@@ -380,7 +445,7 @@ class OncoPrint:
                 cur_x, cur_y = add_legend_item(mut, cell_background, cur_x, cur_y, is_first, True)
                 is_first = False
 
-            if is_annot:
+            if flag_annot:
                 for annot_type, annot_dic in sorted_annotations:
                     cur_x = pad_x
                     cur_y += line_height * 2.0
@@ -395,7 +460,21 @@ class OncoPrint:
                     else:
                         gmin = annot_dic['annotations'].values.ravel().min()
                         gmax = annot_dic['annotations'].values.ravel().max()
-                        add_legend_scaler(gmin, gmax, annot_dic['color'])
+                        add_legend_scaler(gmin, gmax, col=annot_dic['color'])
+            
+            if len(heatmaps) > 0:
+                for k, v in heatmaps.items():
+                    cur_x = pad_x
+                    cur_y += line_height * 2.0
+                    legend_titles.append(k)
+                    legend_yticks.append(cur_y + 0.5)
+                    vmin = v.get('vmin', v['heatmap'].min().min())
+                    vmax = v.get('vmax', v['heatmap'].max().max())
+                    if isinstance(v['cmap'], str):
+                        cmap = plt.get_cmap(v['cmap'])
+                    else:
+                        cmap = v['cmap']
+                    add_legend_scaler(vmin, vmax, cmap=cmap)
 
             ax_legend_height = cur_y + 1
             ax_legend_height_ratio = ax_legend_height / (len(self.sorted_genes) - gap[1])
@@ -415,6 +494,8 @@ class OncoPrint:
                 spine.set_visible(False)
             ax_legend.set_navigate(False)
             ax_legend.add_collection(PatchCollection(legend_patches, match_original=True))
+            for ab in legend_abs:
+                ax_legend.add_artist(ab)
             for pc in legend_pcs:
                 ax_legend.add_collection(pc)
             for t, x, y in legend_texts:
