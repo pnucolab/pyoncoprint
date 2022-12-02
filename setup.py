@@ -6,7 +6,7 @@ with io.open("README.rst", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="pyoncoprint",
-    version="0.3.0-devel",
+    version="0.2.2",
     author="Jeongbin Park",
     author_email="jeongbin.park@pusan.ac.kr",
     description="PyOncoPrint",
