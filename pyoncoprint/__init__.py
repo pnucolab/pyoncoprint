@@ -174,6 +174,9 @@ class OncoPrint:
         heatmap_texts = []
         extra_yticks = []
         for k, v in heatmaps.items():
+            if len(v['heatmap']) == 0:
+                print("Warning: heatmap (%s) is empty and will be ignored."%k)
+                continue
             extra_yticks += [''] + v['heatmap'].index.tolist()
             heatmap_texts.append((0, ax_height + 0.2, k))
             ax_height += 1
@@ -214,9 +217,12 @@ class OncoPrint:
                 elif isinstance(annot_dic['annotations'], np.ndarray):
                     annots = annot_dic['annotations'][self.sorted_sample_indices]
                 else:
-                    raise ValueError("The type of 'annotations' should be either 'pandas.DataFrame' or 'numpy.ndarray'.")
+                    raise ValueError("The type of annotations (" + annot_type + ") should be either 'pandas.DataFrame' or 'numpy.ndarray'.")
                 if annots.ndim > 2:
-                    raise ValueError("The dimension of 'annotations' should be less than 3.")
+                    raise ValueError("The dimension of annotations (" + annot_type + ") should be less than 3.")
+                if len(annots) == 0:
+                    print("Warning: annotations (" + annot_type + ") is empty and will be ignored.")
+                    continue
                 if annots.ndim == 1:
                     annots = annots[:, np.newaxis]
                 else:
@@ -311,10 +317,11 @@ class OncoPrint:
         ax_legend = None
         #ratio_gap = gap / (len(self.sorted_genes) - gap)
         if flag_annot:
-            ratio_annot = (len(annotations) - gap[1]) / (len(self.sorted_genes) - gap[1])
+            num_annots = sum([len(d['annotations']) > 0 for k, d in annotations.items()])
+            ratio_annot = (num_annots - gap[1]) / (len(self.sorted_genes) - gap[1])
             ax_annot = ax_divider.append_axes("top", size="{0:.6%}".format(ratio_annot), pad=0.2)
             ax_annot.add_collection(ax_annot_pc)
-            ax_annot.set_ylim([len(annotations) - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]) 
+            ax_annot.set_ylim([num_annots - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]) 
             ax_annot.set_yticks(range(len(ax_annot_yticks)))
             ax_annot.set_yticklabels(ax_annot_yticks)
             ax.get_shared_x_axes().join(ax, ax_annot)
@@ -447,6 +454,8 @@ class OncoPrint:
 
             if flag_annot:
                 for annot_type, annot_dic in sorted_annotations:
+                    if len(annot_dic['annotations']) == 0:
+                        continue
                     cur_x = pad_x
                     cur_y += line_height * 2.0
                     legend_titles.append(annot_type)
@@ -464,6 +473,8 @@ class OncoPrint:
             
             if len(heatmaps) > 0:
                 for k, v in heatmaps.items():
+                    if len(v['heatmap']) == 0:
+                        continue
                     cur_x = pad_x
                     cur_y += line_height * 2.0
                     legend_titles.append(k)
