@@ -138,7 +138,7 @@ class OncoPrint:
         if isinstance(gap, Number):
             gap = np.array([gap, gap])
         else:
-            assert len(gap) == 2, "The length of 'gap' is only allowed to be 2."
+            assert len(gap) == 2, "gap must be a number or a list of length 2"
             gap = np.array(gap)
             
         backgrounds = []
@@ -155,7 +155,9 @@ class OncoPrint:
                 if self._is_valid_string(self.sorted_mat[i,j]):
                     counts_left[i] += 1
                     for mut in np.unique(self.sorted_mat[i,j].split(self.seperator)):
-                        assert mut in mutation_types, "Marker for '%s' is not defined."%mut
+                        if not mut in mutation_types:
+                            print("Warning: Marker for mutation type '%s' is not defined. It will be ignored."%mut)
+                            continue
                         stacked_counts_top[mutation_types.index(mut), j] += 1
                         stacked_counts_right[mutation_types.index(mut), i] += 1
                         ms = markers[mut]
