@@ -5,6 +5,10 @@ PyOncoPrint
 
 Draw OncoPrint using Python. Check out `example.ipynb </example.ipynb>`_ for basic usage.
 
+Please Cite as:
+
+- PyOncoPrint: a python package for plotting OncoPrints, *Genomics Inform.* 21(1):e7 (2023), doi:10.5808/gi.22079
+
 An example output:
 
 .. image:: oncoprint.png
