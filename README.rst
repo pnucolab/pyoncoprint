@@ -54,17 +54,21 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-.. |downloads| image:: https://static.pepy.tech/badge/pyoncoprint
-    :alt: downloads
+#.. |downloads| image:: https://static.pepy.tech/badge/pyoncoprint
+    #:alt: downloads
     #:scale: 100%
-    :target: https://pepy.tech/project/pyoncoprint
+    #:target: https://pepy.tech/project/pyoncoprint
 
-.. |downloads/month| image:: https://static.pepy.tech/badge/pyoncoprint/month
-    :alt: downloads/month
+#.. |downloads/month| image:: https://static.pepy.tech/badge/pyoncoprint/month
+    #:alt: downloads/month
     #:scale: 100%
-    :target: https://pepy.tech/project/pyoncoprint
+    #:target: https://pepy.tech/project/pyoncoprint
 
-.. |downloads/week| image:: https://static.pepy.tech/badge/pyoncoprint/week
-    :alt: downloads/week
+#.. |downloads/week| image:: https://static.pepy.tech/badge/pyoncoprint/week
+    #:alt: downloads/week
     #:scale: 100%
-    :target: https://pepy.tech/project/pyoncoprint
+    #:target: https://pepy.tech/project/pyoncoprint
+
+.. |downloads| replace:: `[Total Downloads](https://pepy.tech/project/pyoncoprint)`
+.. |downloads/month| replace:: `[Monthly Downloads](https://pepy.tech/project/pyoncoprint/month)`
+.. |downloads/week| replace:: `[Weekly Downloads](https://pepy.tech/project/pyoncoprint/week)`
