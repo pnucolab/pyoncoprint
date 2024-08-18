@@ -1,7 +1,9 @@
 PyOncoPrint
 ===========
 
-|downloads| |downloads/month| |downloads/week|
+|downloads| 
+|downloads/month| 
+|downloads/week|
 
 Draw OncoPrint using Python. Check out `example.ipynb </example.ipynb>`_ for basic usage.
 
