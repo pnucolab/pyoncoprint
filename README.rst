@@ -1,9 +1,12 @@
 PyOncoPrint
 ===========
 
-|downloads| 
-|downloads/month| 
-|downloads/week|
+.. list-table::
+   :header-rows: 0
+
+   * - [downloads](https://pepy.tech/project/pyoncoprint)
+     - [downloads/month](https://pepy.tech/project/pyoncoprint/month)
+     - [downloads/week](https://pepy.tech/project/pyoncoprint/week)
 
 Draw OncoPrint using Python. Check out `example.ipynb </example.ipynb>`_ for basic usage.
 
@@ -70,7 +73,3 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #:alt: downloads/week
     #:scale: 100%
     #:target: https://pepy.tech/project/pyoncoprint
-
-.. |downloads| replace:: `[Total Downloads](https://pepy.tech/project/pyoncoprint)`
-.. |downloads/month| replace:: `[Monthly Downloads](https://pepy.tech/project/pyoncoprint/month)`
-.. |downloads/week| replace:: `[Weekly Downloads](https://pepy.tech/project/pyoncoprint/week)`
