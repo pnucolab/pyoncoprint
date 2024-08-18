@@ -4,9 +4,9 @@ PyOncoPrint
 .. list-table::
    :header-rows: 0
 
-   * - [downloads](https://pepy.tech/project/pyoncoprint)
-     - [downloads/month](https://pepy.tech/project/pyoncoprint/month)
-     - [downloads/week](https://pepy.tech/project/pyoncoprint/week)
+   * - [downloads](https://static.pepy.tech/badge/pyoncoprint)
+     - [downloads/month](https://static.pepy.tech/badge/pyoncoprint/month)
+     - [downloads/week](https://static.pepy.tech/badge/pyoncoprint/week)
 
 Draw OncoPrint using Python. Check out `example.ipynb </example.ipynb>`_ for basic usage.
 
