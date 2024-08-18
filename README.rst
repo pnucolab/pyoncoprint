@@ -58,18 +58,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#.. |downloads| image:: https://static.pepy.tech/badge/pyoncoprint
-    #:alt: downloads
-    #:scale: 100%
-    #:target: https://pepy.tech/project/pyoncoprint
-
-#.. |downloads/month| image:: https://static.pepy.tech/badge/pyoncoprint/month
-    #:alt: downloads/month
-    #:scale: 100%
-    #:target: https://pepy.tech/project/pyoncoprint
-
-#.. |downloads/week| image:: https://static.pepy.tech/badge/pyoncoprint/week
-    #:alt: downloads/week
-    #:scale: 100%
-    #:target: https://pepy.tech/project/pyoncoprint
