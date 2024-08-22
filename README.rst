@@ -57,14 +57,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .. |downloads| image:: https://static.pepy.tech/badge/pyoncoprint
     :alt: downloads
     :target: https://pepy.tech/project/pyoncoprint
-    :scale: 0%
 
 .. |downloads/month| image:: https://static.pepy.tech/badge/pyoncoprint/month
     :alt: downloads/month
     :target: https://pepy.tech/project/pyoncoprint
-    :scale: 0%
 
 .. |downloads/week| image:: https://static.pepy.tech/badge/pyoncoprint/week
     :alt: downloads/week
     :target: https://pepy.tech/project/pyoncoprint
-    :scale: 0%
