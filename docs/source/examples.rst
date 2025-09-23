@@ -6,10 +6,10 @@ Example Data
 
 The following example datasets are available for download and testing:
 
-* `TCGA Lung Adenocarcinoma Data <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example_data/tcga.tsv>`_ - Real cancer genomics data from TCGA
-* `Test Dataset 1 <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example_data/test1.tsv>`_ - Sample mutation data for testing
-* `Test Dataset 2 <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example_data/test2.tsv>`_ - Additional test data
-* `Example Notebook <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example.ipynb>`_ - Complete tutorial notebook
+* `TCGA Lung Adenocarcinoma Data <https://raw.githubusercontent.com/pnucolab/pyoncoprint/refs/heads/master/example_data/tcga.tsv>`_ - Real cancer genomics data from TCGA
+* `Test Dataset 1 <https://raw.githubusercontent.com/pnucolab/pyoncoprint/refs/heads/master/example_data/test1.tsv>`_ - Sample mutation data for testing
+* `Test Dataset 2 <https://raw.githubusercontent.com/pnucolab/pyoncoprint/refs/heads/master/example_data/test2.tsv>`_ - Additional test data
+* `Example Notebook <https://raw.githubusercontent.com/pnucolab/pyoncoprint/refs/heads/master/example.ipynb>`_ - Complete tutorial notebook
 
 Download these files to follow along with the examples below.
 
