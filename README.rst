@@ -5,6 +5,10 @@ PyOncoPrint
 
 Draw OncoPrint using Python. Check out `example.ipynb </example.ipynb>`_ for basic usage.
 
+Please cite as:
+
+- Jeongbin Park and Nagarajan Paramasivam, "PyOncoPrint: a python package for plotting OncoPrints", *Genomics & Informatics* 21(1): e14 (2023), `doi:10.5808/gi.22079 <https://doi.org/10.5808/gi.22079>`_
+
 An example output:
 
 .. image:: oncoprint.png
@@ -50,17 +54,14 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-.. |downloads| image:: https://pepy.tech/badge/pyoncoprint
+.. |downloads| image:: https://static.pepy.tech/badge/pyoncoprint
     :alt: downloads
-    :scale: 100%
     :target: https://pepy.tech/project/pyoncoprint
 
-.. |downloads/month| image:: https://pepy.tech/badge/pyoncoprint/month
+.. |downloads/month| image:: https://static.pepy.tech/badge/pyoncoprint/month
     :alt: downloads/month
-    :scale: 100%
-    :target: https://pepy.tech/project/pyoncoprint/month
+    :target: https://pepy.tech/project/pyoncoprint
 
-.. |downloads/week| image:: https://pepy.tech/badge/pyoncoprint/week
+.. |downloads/week| image:: https://static.pepy.tech/badge/pyoncoprint/week
     :alt: downloads/week
-    :scale: 100%
-    :target: https://pepy.tech/project/pyoncoprint/week
+    :target: https://pepy.tech/project/pyoncoprint

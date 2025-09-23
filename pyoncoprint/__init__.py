@@ -306,7 +306,7 @@ class OncoPrint:
                 ax.scatter(*scatter_mutations[mut], **scatter_kwargs)
 
         ax2 = ax.twinx()
-        ax.get_shared_y_axes().join(ax, ax2)
+        ax2.sharey(ax)
         ax2.set_yticks(range(len(self.sorted_genes)))
         ax2.set_yticklabels(self.sorted_genes)
         ax2.tick_params(top=False, bottom=False, left=False, right=False)
@@ -326,14 +326,14 @@ class OncoPrint:
             ax_annot.set_ylim([num_annots - 1 + background_lengths[1]/2.0, -background_lengths[1]/2.0]) 
             ax_annot.set_yticks(range(len(ax_annot_yticks)))
             ax_annot.set_yticklabels(ax_annot_yticks)
-            ax.get_shared_x_axes().join(ax, ax_annot)
+            ax_annot.sharex(ax)
             ax_annot.tick_params(top=False, bottom=False, left=False, right=False,
                                  labeltop=False, labelbottom=False, labelleft=True, labelright=False)
             for spine in ax_annot.spines.values():
                 spine.set_visible(False)
         if topplot:
             ax_top = ax_divider.append_axes("top", size=1, pad=0.2)
-            ax.get_shared_x_axes().join(ax, ax_top)
+            ax_top.sharex(ax)
             bottom = np.zeros(self.mat.shape[1])
             for idx, cnts in enumerate(stacked_counts_top):
                 col = markers[mutation_types[idx]]['color']
@@ -349,7 +349,7 @@ class OncoPrint:
                 spine.set_visible(False)
         if rightplot:
             ax_right = ax_divider.append_axes("right", size=2, pad=1)
-            ax.get_shared_y_axes().join(ax, ax_right)
+            ax_right.sharey(ax)
             left = np.zeros(self.mat.shape[0])
             for idx, cnts in enumerate(stacked_counts_right):
                 col = markers[mutation_types[idx]]['color']
