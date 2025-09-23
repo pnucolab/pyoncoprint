@@ -23,6 +23,16 @@ dependencies = [
 Homepage = "https://pnucolab.com"
 Repository = "https://github.com/pnucolab/pyoncoprint"
 
+[tool.setuptools]
+packages = ["pyoncoprint"]
+
+[tool.setuptools.package-data]
+"*" = ["*.tsv", "*.ipynb"]
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [dependency-groups]
 dev = [
     "sphinx",
