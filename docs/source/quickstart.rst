@@ -8,6 +8,8 @@ Basic Usage
 
 1. Import the library and prepare your data:
 
+**Note**: PyOncoPrint automatically handles duplicate gene names by concatenating their mutations with a separator (default: ",").
+
 .. code-block:: python
 
    import pyoncoprint

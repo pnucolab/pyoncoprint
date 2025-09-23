@@ -34,6 +34,35 @@ Creating a simple OncoPrint with common mutation types:
    fig, axes = op.oncoprint(markers, figsize=[15, 8], title="Cancer Gene Mutations")
    plt.show()
 
+Multiple Mutations per Cell
+----------------------------
+
+PyOncoPrint supports multiple mutations in the same cell by separating them with commas:
+
+.. code-block:: python
+
+   import pyoncoprint
+   import pandas as pd
+
+   # Data with multiple mutations per cell
+   data = pd.DataFrame({
+       'Sample1': ['Missense,Amplification', '', 'Truncating'],
+       'Sample2': ['Missense', 'Deep Deletion', ''],
+       'Sample3': ['', 'Missense,Splice', 'Amplification']
+   }, index=['TP53', 'EGFR', 'PTEN'])
+
+   # Define markers - zindex controls layering
+   markers = {
+       'Amplification': {'marker': 'fill', 'color': 'red', 'zindex': 0},
+       'Deep Deletion': {'marker': 'fill', 'color': 'blue', 'zindex': 0},
+       'Missense': {'marker': 'fill', 'color': 'green', 'height': 0.5, 'zindex': 1},
+       'Truncating': {'marker': 'fill', 'color': 'black', 'height': 0.5, 'zindex': 1},
+       'Splice': {'marker': 'fill', 'color': 'orange', 'height': 0.5, 'zindex': 1}
+   }
+
+   op = pyoncoprint.OncoPrint(data)
+   fig, axes = op.oncoprint(markers, figsize=[12, 8])
+
 TCGA-style OncoPrint
 --------------------
 

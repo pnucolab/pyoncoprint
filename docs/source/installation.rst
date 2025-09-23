@@ -44,4 +44,14 @@ To verify that PyOncoPrint is installed correctly:
 .. code-block:: python
 
    import pyoncoprint
-   print(pyoncoprint.__version__)
+   # If no error occurs, the installation was successful
+
+   # Create a simple test
+   import pandas as pd
+   data = pd.DataFrame({
+       'Sample1': ['Missense'],
+       'Sample2': ['Truncating']
+   }, index=['Gene1'])
+
+   op = pyoncoprint.OncoPrint(data)
+   print("PyOncoPrint successfully imported and initialized!")

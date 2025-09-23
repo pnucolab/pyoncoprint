@@ -29,13 +29,13 @@ OncoPrint.__init__
      - Description
    * - recurrence_matrix
      - pd.DataFrame or np.ndarray
-     - Matrix of mutations/alterations (genes x samples)
+     - Matrix of mutations/alterations (genes x samples). If DataFrame, genes should be index and samples should be columns
    * - genes
      - array-like, optional
-     - Gene names for rows
+     - Gene names for rows. If not provided, extracted from DataFrame index or auto-generated
    * - samples
      - array-like, optional
-     - Sample names for columns
+     - Sample names for columns. If not provided, extracted from DataFrame columns or auto-generated
    * - separator
      - str, default=","
      - Separator for multiple mutations in same cell
@@ -93,48 +93,58 @@ OncoPrint.oncoprint
 Marker Specifications
 ---------------------
 
-Markers define how different mutation types are displayed:
+Markers define how different mutation types are displayed. Each marker must have a 'color' field.
 
 Rectangle/Fill Markers
 ~~~~~~~~~~~~~~~~~~~~~~
+
+For rectangular patches that fill the cell:
 
 .. code-block:: python
 
    {
        'marker': 'fill',  # or 'rect'
-       'color': 'red',
-       'width': 1.0,      # Optional, 0-1 ratio
-       'height': 0.5,     # Optional, 0-1 ratio
-       'zindex': 1,       # Optional, z-order
-       'linewidth': 0     # Optional
+       'color': 'red',    # Required
+       'width': 1.0,      # Optional, 0-1 ratio (default: 1.0)
+       'height': 0.5,     # Optional, 0-1 ratio (default: 1.0)
+       'zindex': 1,       # Optional, z-order for layering (default: 1)
+       'linewidth': 0     # Optional, border width (default: 0)
    }
 
 Custom Patch Markers
 ~~~~~~~~~~~~~~~~~~~~
+
+For custom shapes using matplotlib patches:
 
 .. code-block:: python
 
    from matplotlib.patches import Polygon
 
    {
-       'marker': Polygon([[0, 0], [1, 1], [1, 0]]),
-       'color': 'green',
-       'linewidth': 0,
-       'zindex': 1
+       'marker': Polygon([[0, 0], [1, 1], [1, 0]]),  # Triangle
+       'color': 'green',      # Required
+       'width': 1.0,          # Optional, scaling factor
+       'height': 1.0,         # Optional, scaling factor
+       'linewidth': 0,        # Optional
+       'zindex': 1            # Optional
    }
 
 Scatter Markers
 ~~~~~~~~~~~~~~~
 
+For point markers using matplotlib scatter:
+
 .. code-block:: python
 
    {
-       'marker': '*',     # Any matplotlib marker
-       'color': 'purple',
-       's': 100,          # Size
-       'lw': 0,           # Line width
-       'zindex': 2
+       'marker': '*',     # Any matplotlib marker symbol
+       'color': 'purple', # Required
+       's': 100,          # Optional, marker size
+       'lw': 0,           # Optional, edge line width
+       'zindex': 2        # Optional
    }
+
+Note: The 'zindex' parameter controls layering - lower values are drawn first (background), higher values on top.
 
 Annotation Specifications
 -------------------------
@@ -188,8 +198,19 @@ The `oncoprint()` method returns:
 Where:
 - ``fig``: matplotlib Figure object
 - ``ax``: Main oncoprint axis
-- ``ax2``: Twin axis for gene labels
-- ``ax_top``: Top barplot axis (sample frequencies)
-- ``ax_annot``: Annotation tracks axis
-- ``ax_right``: Right barplot axis (gene frequencies)
-- ``ax_legend``: Legend axis
+- ``ax2``: Twin axis for gene labels (right side)
+- ``ax_top``: Top barplot axis (sample frequencies), None if topplot=False
+- ``ax_annot``: Annotation tracks axis, None if no annotations
+- ``ax_right``: Right barplot axis (gene frequencies), None if rightplot=False
+- ``ax_legend``: Legend axis, None if legend=False
+
+Deprecated Parameters
+---------------------
+
+The following parameters are deprecated but still supported for backward compatibility:
+
+- ``is_topplot``: Use ``topplot`` instead
+- ``is_rightplot``: Use ``rightplot`` instead
+- ``is_legend``: Use ``legend`` instead
+
+These will print a warning message if used.

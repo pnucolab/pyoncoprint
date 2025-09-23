@@ -30,7 +30,7 @@ def _get_text_bbox(t, ax, x=0, y=0, scale=[1, 1], fontdict=None):
 
     
 class OncoPrint:
-    def __init__(self, recurrence_matrix, genes=None, samples=None, seperator=","):
+    def __init__(self, recurrence_matrix, genes=None, samples=None, separator=","):
         if isinstance(recurrence_matrix, pd.DataFrame):
             if samples is None:
                 samples = recurrence_matrix.columns
@@ -55,7 +55,7 @@ class OncoPrint:
                 for ridx in range(1, len(rows)):
                     for cidx in range(len(samples)):
                         if self._is_valid_string(joined_row[cidx]) and self._is_valid_string(rows[ridx][cidx]):
-                            joined_row[cidx] += seperator + rows[ridx][cidx]
+                            joined_row[cidx] += separator + rows[ridx][cidx]
                         elif self._is_valid_string(rows[ridx][cidx]):
                             joined_row[cidx] = rows[ridx][cidx]
                 dedup_mat.append(joined_row)
@@ -65,7 +65,7 @@ class OncoPrint:
             self.mat = mat
             self.genes = genes
             
-        self.seperator = seperator
+        self.separator = separator
         self.samples = samples   
         
     def _is_valid_string(self, s):
@@ -76,7 +76,7 @@ class OncoPrint:
         for i in range(self.sorted_mat.shape[0]):
             for j in range(self.sorted_mat.shape[1]):
                 if self._is_valid_string(self.sorted_mat[i,j]):
-                    cntmat[i,j] = len(np.unique(self.sorted_mat[i,j].split(self.seperator)))
+                    cntmat[i,j] = len(np.unique(self.sorted_mat[i,j].split(self.separator)))
         
         sorted_indices = np.argsort(np.sum(cntmat, axis=1))[::-1] # gene order
         self.sorted_genes = self.genes[sorted_indices]
@@ -88,7 +88,7 @@ class OncoPrint:
         for i in range(self.sorted_mat.shape[0]):
             for j in range(self.sorted_mat.shape[1]):
                 if self._is_valid_string(self.sorted_mat[i,j]):
-                    for mut in np.unique(self.sorted_mat[i,j].split(self.seperator)):
+                    for mut in np.unique(self.sorted_mat[i,j].split(self.separator)):
                         weighted_flipped_cntmat[self.sorted_mat.shape[0] - i - 1, j] += mutation_to_weight.get(mut, 0)
         self.sorted_sample_indices = np.lexsort(weighted_flipped_cntmat)[::-1]
         self.sorted_samples = self.samples[self.sorted_sample_indices]
@@ -154,7 +154,7 @@ class OncoPrint:
                 backgrounds.append(Rectangle(-background_lengths / 2.0 + (j, i, ), *background_lengths))
                 if self._is_valid_string(self.sorted_mat[i,j]):
                     counts_left[i] += 1
-                    for mut in np.unique(self.sorted_mat[i,j].split(self.seperator)):
+                    for mut in np.unique(self.sorted_mat[i,j].split(self.separator)):
                         if not mut in mutation_types:
                             print("Warning: Marker for mutation type '%s' is not defined. It will be ignored."%mut)
                             continue
