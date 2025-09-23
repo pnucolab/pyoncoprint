@@ -1,14 +1,28 @@
 [project]
 name = "pyoncoprint"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "matplotlib>=3.10.6",
-    "numpy>=2.3.3",
-    "pandas>=2.3.2",
+version = "0.2.5"
+description = "PyOncoPrint"
+readme = "README.rst"
+requires-python = ">=2.7"
+license = {text = "BSD-2-Clause"}
+authors = [
+    {name = "Jeongbin Park", email = "jeongbin.park@pusan.ac.kr"}
 ]
+classifiers = [
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+]
+
+[project.urls]
+Homepage = "https://pnucolab.com"
+Repository = "https://github.com/pnucolab/pyoncoprint"
 
 [dependency-groups]
 dev = [
