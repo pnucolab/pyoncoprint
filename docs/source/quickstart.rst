@@ -3,6 +3,8 @@ Quick Start Guide
 
 This guide will walk you through creating your first OncoPrint visualization.
 
+For real-world examples, download the sample datasets from our `Examples page <examples.html>`_ including TCGA cancer genomics data.
+
 Basic Usage
 -----------
 

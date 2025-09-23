@@ -13,8 +13,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 project = 'PyOncoPrint'
 copyright = '2025, Jeongbin Park'
 author = 'Jeongbin Park'
-release = '0.2.4'
-version = '0.2.4'
+release = '0.2.6'
+version = '0.2.6'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

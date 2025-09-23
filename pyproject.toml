@@ -1,6 +1,6 @@
 [project]
 name = "pyoncoprint"
-version = "0.2.5"
+version = "0.2.6"
 description = "PyOncoPrint"
 readme = "README.rst"
 requires-python = ">=3.7"

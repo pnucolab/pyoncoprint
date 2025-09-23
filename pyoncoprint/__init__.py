@@ -1,3 +1,5 @@
+__version__ = "0.2.6"
+
 import numpy as np
 import pandas as pd
 

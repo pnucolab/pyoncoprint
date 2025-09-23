@@ -1,6 +1,18 @@
 Examples
 ========
 
+Example Data
+------------
+
+The following example datasets are available for download and testing:
+
+* `TCGA Lung Adenocarcinoma Data <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example_data/tcga.tsv>`_ - Real cancer genomics data from TCGA
+* `Test Dataset 1 <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example_data/test1.tsv>`_ - Sample mutation data for testing
+* `Test Dataset 2 <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example_data/test2.tsv>`_ - Additional test data
+* `Example Notebook <https://raw.githubusercontent.com/pnucolab/pyoncoprint/main/example.ipynb>`_ - Complete tutorial notebook
+
+Download these files to follow along with the examples below.
+
 Basic OncoPrint
 ---------------
 
@@ -347,16 +359,46 @@ Working with real data files:
 
 .. code-block:: python
 
+   # Download and load the TCGA example data
+   import pandas as pd
+   import numpy as np
+
+   # Load TCGA data (download from the link above)
+   df = pd.read_csv('tcga.tsv', sep='\t', header=0)
+
+   # Extract oncoprint data (mutations and CNAs)
+   df_oncoprint = df[df['track_type'].isin(['MUTATIONS', 'CNA'])].drop(columns=['track_type']).set_index('track_name').fillna('')
+
+   # Clean up mutation names
+   df_oncoprint.replace('amp_rec', 'Amplification', inplace=True)
+   df_oncoprint.replace('homdel_rec', 'Deep Deletion', inplace=True)
+   df_oncoprint.replace('splice', 'Splice Mutation', inplace=True)
+
+   # Define markers for TCGA data
+   markers = {
+       'Amplification': {'marker': 'fill', 'color': 'red', 'zindex': 0},
+       'Deep Deletion': {'marker': 'fill', 'color': 'blue', 'zindex': 0},
+       'Missense Mutation': {'marker': 'fill', 'color': 'green', 'height': 0.5, 'zindex': 1},
+       'Truncating mutation': {'marker': 'fill', 'color': 'black', 'height': 0.5, 'zindex': 1},
+       'Splice Mutation': {'marker': 'fill', 'color': 'orange', 'height': 0.5, 'zindex': 1}
+   }
+
+   # Create OncoPrint
+   op = pyoncoprint.OncoPrint(df_oncoprint)
+   fig, axes = op.oncoprint(markers, figsize=[30, 15], title="TCGA Lung Adenocarcinoma")
+
+Working with other data formats:
+
+.. code-block:: python
+
    # From CSV file
    mutation_df = pd.read_csv('mutations.csv', index_col=0)
 
-   # From TSV file (e.g., from cBioPortal)
-   cbio_data = pd.read_csv('cbioportal_data.tsv', sep='\\t', index_col=0)
+   # From TSV file (general format)
+   data = pd.read_csv('data.tsv', sep='\\t', index_col=0)
 
-   # Process cBioPortal format
-   # Typically needs transposing and cleaning
-   processed_data = cbio_data.T
-   processed_data = processed_data.replace({'NaN': '', np.nan: ''})
+   # Process and clean data
+   processed_data = data.replace({'NaN': '', np.nan: ''})
 
    # Create OncoPrint
    op = pyoncoprint.OncoPrint(processed_data)

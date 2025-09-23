@@ -44,7 +44,7 @@ To verify that PyOncoPrint is installed correctly:
 .. code-block:: python
 
    import pyoncoprint
-   # If no error occurs, the installation was successful
+   print(pyoncoprint.__version__)  # Should print version number (e.g., '0.2.6')
 
    # Create a simple test
    import pandas as pd
