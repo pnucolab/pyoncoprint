@@ -31,6 +31,13 @@ Features
 * Flexible sorting options for genes and samples
 * Export high-quality figures for publication
 
+Citation
+--------
+
+If you use PyOncoPrint in your research, please cite:
+
+Jeongbin Park and Nagarajan Paramasivam, "PyOncoPrint: a python package for plotting OncoPrints", *Genomics & Informatics* 21(1): e14 (2023), `doi:10.5808/gi.22079 <https://doi.org/10.5808/gi.22079>`_
+
 Quick Example
 -------------
 

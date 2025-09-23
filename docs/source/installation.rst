@@ -26,7 +26,7 @@ To install the latest development version from GitHub:
 
 .. code-block:: bash
 
-   git clone https://github.com/pjb7687/pyoncoprint.git
+   git clone https://github.com/pnucolab/pyoncoprint.git
    cd pyoncoprint
    pip install -e .
 
@@ -34,7 +34,7 @@ Or directly via pip:
 
 .. code-block:: bash
 
-   pip install git+https://github.com/pjb7687/pyoncoprint.git
+   pip install git+https://github.com/pnucolab/pyoncoprint.git
 
 Verify Installation
 -------------------
